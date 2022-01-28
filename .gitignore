@@ -80,8 +80,9 @@ jspm_packages/
 # dotenv environment variables file
 .env
 
-# config files
+# ignored files
 config.json
+example.js
 
 # next.js build output
 .next
