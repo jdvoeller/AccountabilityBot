@@ -1,4 +1,5 @@
-const { Client, Intents } = require('discord.js');
+const fs = require('fs');
+const { Client, Collection, Intents } = require('discord.js');
 const { token } = require('./config.json');
 
 const USERS = {
@@ -7,18 +8,30 @@ const USERS = {
 
 const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
 
+client.commands = new Collection();
+const commandFiles = fs.readdirSync('./commands').filter((file) => file.endsWith('.js'));
+
+for (const file of commandFiles) {
+	const command = require(`./commands/${file}`);
+	client.commands.set(command.data.name, command);
+}
+
 client.once('ready', () => {
-	console.log(client);
+	console.log('Bot is up and running!');
 });
 
-client.on('interactionCreate', async interaction => {
+client.on('interactionCreate', async (interaction) => {
 	if (!interaction.isCommand()) return;
 
-	const { commandName } = interaction;
+	const command = client.commands.get(interaction.commandName);
 
-	if (commandName === 'test') {
-		console.log(interaction);
-		await interaction.reply('harri is a piece of shit');
+	if (!command) return;
+
+	try{
+		await command.execute(interaction);
+	} catch (e) {
+		console.error(e);
+		return interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
 	}
 });
 
