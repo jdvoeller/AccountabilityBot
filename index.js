@@ -23,6 +23,8 @@ client.once('ready', () => {
 client.on('interactionCreate', async (interaction) => {
 	if (!interaction.isCommand()) return;
 
+	if (interaction.channelId !== '936017308319641630') return;
+
 	const command = client.commands.get(interaction.commandName);
 
 	if (!command) return;
