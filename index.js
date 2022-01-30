@@ -11,6 +11,9 @@ const PREFIX = '!';
 const SET_KEY_WORD = 'set';
 const COMPLETE_KEY_WORD = 'complete';
 
+// Channels
+const ACCOUNTABILITY_CHANNEL = '936017308319641630';
+
 // Users
 const USERS = {
 	197921111973953536: 'Jordan',
@@ -24,19 +27,11 @@ const USERS = {
 // Logic
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, 'GUILD_MESSAGES'] });
 
-client.commands = new Collection();
-const commandFiles = fs.readdirSync('./commands').filter((file) => file.endsWith('.js'));
-
-for (const file of commandFiles) {
-	const command = require(`./commands/${file}`);
-	client.commands.set(command.data.name, command);
-}
-
 client.once('ready', () => {
 	console.log('Fired up and ready to serve...');
 	// '1 30 9 * * 0' - 9:30 every sunday
 	const JOB = new CronJob('1 30 9 * * 0', () => {
-		client.channels.cache.get('936017308319641630').send('@everyone ' + WeeklyReminder);
+		client.channels.cache.get(ACCOUNTABILITY_CHANNEL).send('@everyone ' + WeeklyReminder);
 	});
 	JOB.start();
 });
@@ -45,9 +40,9 @@ client.on('messageCreate', message => {
 	// Ignore messages without prefix and if it's the bot
 	if (!message.content.startsWith(PREFIX) || message.author.bot) return;
 
-	if (message.content.startsWith(PREFIX+SET_KEY_WORD)) {
-		console.log('set');
-	} else if (message.content.startsWith(PREFIX+COMPLETE_KEY_WORD)) {
+	if (message.content.toLocaleLowerCase().startsWith(PREFIX+SET_KEY_WORD)) {
+		message.reply('most excellent');
+	} else if (message.content.toLocaleLowerCase().startsWith(PREFIX+COMPLETE_KEY_WORD)) {
 		console.log('complete');
 	} else {
 		console.log(message);
