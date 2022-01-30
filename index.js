@@ -3,8 +3,11 @@ const { Client, Collection, Intents } = require('discord.js');
 const { token } = require('./config.json');
 const CronJob = require('cron').CronJob;
 
+// FIREBASE DATABASE
+// https://console.firebase.google.com/u/0/project/accountability-aff36/firestore/data/~2F
+
 // Reminders
-const WeeklyReminder = 'Hey Everyone, remember to use the command (!set) and use M T W Th F Sat Sun to set your schedule today for the current week. Example: !set M,W,F to schedule your workouts for Monday, Wednesday, and Friday. When you have finish with a day use the complete command (!complete) with the day you completed. Example: "!complete Th"';
+const WeeklyReminder = 'Hey Everyone, remember to use the command (!set) and use Mon Tue Wed Thu Fri Sat Sun to set your schedule today for the current week. Example: !set Mon, Wed, Fri to schedule your workouts for Monday, Wednesday, and Friday. When you have finish with a day use the complete command (!complete) with the day you completed. Example: "!complete Thu"';
 
 // Commands
 const PREFIX = '!';
