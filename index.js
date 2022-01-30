@@ -1,12 +1,28 @@
 const fs = require('fs');
 const { Client, Collection, Intents } = require('discord.js');
 const { token } = require('./config.json');
+const CronJob = require('cron').CronJob;
 
+// Reminders
+const WeeklyReminder = 'Hey Everyone, remember to use the command (!set) and use M T W Th F Sat Sun to set your schedule today for the current week. Example: !set M,W,F to schedule your workouts for Monday, Wednesday, and Friday. When you have finish with a day use the complete command (!complete) with the day you completed. Example: "!complete Th"';
+
+// Commands
+const PREFIX = '!';
+const SET_KEY_WORD = 'set';
+const COMPLETE_KEY_WORD = 'complete';
+
+// Users
 const USERS = {
-	jordan: '197921111973953536',
+	197921111973953536: 'Jordan',
+	673392316731490304: 'Kody',
+	673311526240911420: 'Tyler',
+	190193825476509696: 'Derek',
+	119962433979809793: 'Harri',
+	162667595546361856: 'Braxton',
 }
 
-const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
+// Logic
+const client = new Client({ intents: [Intents.FLAGS.GUILDS, 'GUILD_MESSAGES'] });
 
 client.commands = new Collection();
 const commandFiles = fs.readdirSync('./commands').filter((file) => file.endsWith('.js'));
@@ -17,24 +33,32 @@ for (const file of commandFiles) {
 }
 
 client.once('ready', () => {
-	console.log('Bot is up and running!');
+	console.log('Fired up and ready to serve...');
+	// '1 30 9 * * 0' - 9:30 every sunday
+	const JOB = new CronJob('1 30 9 * * 0', () => {
+		client.channels.cache.get('936017308319641630').send('@everyone ' + WeeklyReminder);
+	});
+	JOB.start();
 });
 
-client.on('interactionCreate', async (interaction) => {
-	if (!interaction.isCommand()) return;
+client.on('messageCreate', message => {
+	// Ignore messages without prefix and if it's the bot
+	if (!message.content.startsWith(PREFIX) || message.author.bot) return;
 
-	if (interaction.channelId !== '936017308319641630') return;
-
-	const command = client.commands.get(interaction.commandName);
-
-	if (!command) return;
-
-	try{
-		await command.execute(interaction);
-	} catch (e) {
-		console.error(e);
-		return interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+	if (message.content.startsWith(PREFIX+SET_KEY_WORD)) {
+		console.log('set');
+	} else if (message.content.startsWith(PREFIX+COMPLETE_KEY_WORD)) {
+		console.log('complete');
+	} else {
+		console.log(message);
 	}
-});
+})
+
+
+function createUserObj(user, message) {
+	return {
+		userName: USERS[user.author.id]
+	}
+}
 
 client.login(token);
