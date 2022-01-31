@@ -1,5 +1,5 @@
 const fs = require('fs');
-const { Client, Collection, Intents } = require('discord.js');
+const { Client, Intents } = require('discord.js');
 const { token } = require('./config.json');
 const CronJob = require('cron').CronJob;
 
@@ -29,48 +29,234 @@ const COMPLETE_KEY_WORD = 'complete';
 // Channels
 const ACCOUNTABILITY_CHANNEL = '936017308319641630';
 
-// Users
-const USERS = {
-	197921111973953536: 'Jordan',
-	673392316731490304: 'Kody',
-	673311526240911420: 'Tyler',
-	190193825476509696: 'Derek',
-	119962433979809793: 'Harri',
-	162667595546361856: 'Braxton',
-}
-
 // Logic
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, 'GUILD_MESSAGES'] });
 
 client.once('ready', () => {
 	console.log('Fired up and ready to serve...');
-	// '1 30 9 * * 0' - 9:30 every sunday
-	const JOB = new CronJob('1 30 9 * * 0', () => {
-		client.channels.cache.get(ACCOUNTABILITY_CHANNEL).send('@everyone ' + WeeklyReminder);
-	});
-	JOB.start();
+	
+	// Start reminder jobs
+	startWeeklyReminder();
+	startMorningReminder();
+	startBerateLosers();
 });
 
 client.on('messageCreate', message => {
 	// Ignore messages without prefix and if it's the bot
 	if (!message.content.startsWith(PREFIX) || message.author.bot) return;
 
-	if (message.content.toLocaleLowerCase().startsWith(PREFIX+SET_KEY_WORD)) {
+	if (message.content.toLowerCase().startsWith(PREFIX+SET_KEY_WORD)) {
 		DB.collection(COLLECTION).doc(message.author.id).set(createUserObj(message.author, message.content)).then(() => {
 			console.log(`${message.author.username} updated/created successfully`);
 		});
-	} else if (message.content.toLocaleLowerCase().startsWith(PREFIX+COMPLETE_KEY_WORD)) {
+	} else if (message.content.toLowerCase().startsWith(PREFIX+COMPLETE_KEY_WORD)) {
 		getUserById(message.author.id).then((data) => {
 			let updatedUser = updateUserAndCompleteDay(data.data(), message.content);
 			if (updatedUser.completed) {
 				message.reply('@everyone ' + `${updatedUser.name}` + ' has completed their weekly goals! I bet you feel like a piece of shit compared to them xD');
+			} else {
+				message.reply(`Great job on completing your goal for today ${updatedUser.name}!!`);
 			}
 			DB.collection(COLLECTION).doc(updatedUser.id).set(updatedUser).then(() => console.log(`${updatedUser.name} completed/updated`));
 		});
-	} else {
-		message.reply('An unexpected error ocurred');
 	}
 });
+
+function startWeeklyReminder() {
+	// '1 30 9 * * 0' - 9:30 every sunday
+	const JOB = new CronJob('1 30 9 * * 0', () => {
+		client.channels.cache.get(ACCOUNTABILITY_CHANNEL).send('@everyone ' + WeeklyReminder);
+	});
+	JOB.start();
+}
+
+function startMorningReminder() {
+	// Runs at 10AM everyday
+	const JOB = new CronJob('15 24 12 * * *', () => {
+		const today = new Date().getDay();
+
+		getUsersCollection().then((users) => {
+			const AllUsers = users.docs.map(doc => doc.data());
+			let userString;
+			switch(today) {
+				// Sunday
+				case 0:
+					usersString = getStringOfUsersDueToday(AllUsers, 'sun');
+					if (!!usersString) {
+						sendDailyReminder(usersString);
+					}
+					break;
+
+				// Monday
+				case 1:
+					usersString = getStringOfUsersDueToday(AllUsers, 'mon');
+					if (!!usersString) {
+						sendDailyReminder(usersString);
+					}
+					break;
+					
+				// Tuesday
+				case 2:
+					usersString = getStringOfUsersDueToday(AllUsers, 'tue');
+					if (!!usersString) {
+						sendDailyReminder(usersString);
+					}
+					break;
+	
+				// Wednesday
+				case 3:
+					usersString = getStringOfUsersDueToday(AllUsers, 'wed');
+					if (!!usersString) {
+						sendDailyReminder(usersString);
+					}
+					break;
+				
+				// Thursday
+				case 4:
+					usersString = getStringOfUsersDueToday(AllUsers, 'thu');
+					if (!!usersString) {
+						sendDailyReminder(usersString);
+					}
+					break;
+				
+				// Friday
+				case 5:
+					usersString = getStringOfUsersDueToday(AllUsers, 'fri');
+					if (!!usersString) {
+						sendDailyReminder(usersString);
+					}
+					break;
+	
+				// Saturday
+				case 6:
+					usersString = getStringOfUsersDueToday(AllUsers, 'sat');
+					if (!!usersString) {
+						sendDailyReminder(usersString);
+					}
+					break;
+			}
+		});
+		console.log('Daily reminder sent');
+	});
+	JOB.start();
+}
+
+function startBerateLosers() {
+	// Runs at 8PM everyday
+	const JOB = new CronJob('1 25 12 * * *', () => {
+		const today = new Date().getDay();
+
+		getUsersCollection().then((users) => {
+			const AllUsers = users.docs.map(doc => doc.data());
+			let userString;
+			switch(today) {
+				// Sunday
+				case 0:
+					usersString = getStringOfUsersDueToday(AllUsers, 'sun');
+					if (!!usersString) {
+						sendDailyBeratement(usersString);
+					}
+					break;
+
+				// Monday
+				case 1:
+					usersString = getStringOfUsersDueToday(AllUsers, 'mon');
+					if (!!usersString) {
+						sendDailyBeratement(usersString);
+					}
+					break;
+					
+				// Tuesday
+				case 2:
+					usersString = getStringOfUsersDueToday(AllUsers, 'tue');
+					if (!!usersString) {
+						sendDailyBeratement(usersString);
+					}
+					break;
+	
+				// Wednesday
+				case 3:
+					usersString = getStringOfUsersDueToday(AllUsers, 'wed');
+					if (!!usersString) {
+						sendDailyBeratement(usersString);
+					}
+					break;
+				
+				// Thursday
+				case 4:
+					usersString = getStringOfUsersDueToday(AllUsers, 'thu');
+					if (!!usersString) {
+						sendDailyBeratement(usersString);
+					}
+					break;
+				
+				// Friday
+				case 5:
+					usersString = getStringOfUsersDueToday(AllUsers, 'fri');
+					if (!!usersString) {
+						sendDailyBeratement(usersString);
+					}
+					break;
+	
+				// Saturday
+				case 6:
+					usersString = getStringOfUsersDueToday(AllUsers, 'sat');
+					if (!!usersString) {
+						sendDailyBeratement(usersString);
+					}
+					break;
+			}
+		});
+		console.log('Beratement reminder sent');
+	});
+	JOB.start();
+}
+
+function sendDailyReminder(users) {
+	client.channels.cache.get(ACCOUNTABILITY_CHANNEL).send(`Reminder the following people have goals to be met today: ${users}`);
+}
+
+function sendDailyBeratement(users) {
+	client.channels.cache.get(ACCOUNTABILITY_CHANNEL).send('@everyone ' + `The following fakies havent completed their goals: ${users}. Tag them and remind them.`);
+}
+
+function getStringOfUsersDueToday(userArr, day) {
+	let usersDue;
+	switch (day) {
+		case 'sun':
+			usersDue = userArr.filter((user) => !user.sunCompleted);
+			break;
+		case 'mon':
+			usersDue = userArr.filter((user) => !user.monCompleted);
+			break;
+		case 'tue':
+			usersDue = userArr.filter((user) => !user.tueCompleted);
+			break;
+		case 'wed':
+			usersDue = userArr.filter((user) => !user.wedCompleted);
+			break;
+		case 'thu':
+			usersDue = userArr.filter((user) => !user.thuCompleted);
+			break;
+		case 'fri':
+			usersDue = userArr.filter((user) => !user.friCompleted);
+			break;
+		case 'sat':
+			usersDue = userArr.filter((user) => !user.satCompleted);
+			break;
+		default:
+			break;
+	}
+
+	if (!usersDue.length) {
+		return '';
+	}
+
+	let stringOfUsers = '';
+	usersDue.forEach((user) => stringOfUsers = stringOfUsers + `${user.name}, `);
+	stringOfUsers = stringOfUsers.slice(0, -2)
+	return stringOfUsers;
+}
 
 function updateUserAndCompleteDay(user, message) {
 	let messageSplit = message.split(' ')[1].toLowerCase();
@@ -136,6 +322,10 @@ function getDays(message) {
 
 function getUserById(id) {
 	return DB.collection(COLLECTION).doc(id).get();
+}
+
+function getUsersCollection() {
+	return DB.collection(COLLECTION).get();
 }
 
 function dayIncluded(daysSelected, day) {
