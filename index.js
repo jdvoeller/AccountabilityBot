@@ -3,6 +3,18 @@ const { Client, Collection, Intents } = require('discord.js');
 const { token } = require('./config.json');
 const CronJob = require('cron').CronJob;
 
+// Firebase
+const ADMIN = require('firebase-admin');
+const SERVICE_ACCOUNT = require('./serviceAccountKey.json');
+ADMIN.initializeApp({
+	credential: ADMIN.credential.cert(SERVICE_ACCOUNT),
+});
+
+const DB = ADMIN.firestore();
+const COLLECTION = 'allUsers';
+
+// db.collection('new').doc('testDoc').set({ test: 'test'});
+
 // FIREBASE DATABASE
 // https://console.firebase.google.com/u/0/project/accountability-aff36/firestore/data/~2F
 
