@@ -48,6 +48,7 @@ client.on('messageCreate', message => {
 	if (message.content.toLowerCase().startsWith(PREFIX+SET_KEY_WORD)) {
 		DB.collection(COLLECTION).doc(message.author.id).set(createUserObj(message.author, message.content)).then(() => {
 			console.log(`${message.author.username} updated/created successfully`);
+			message.reply(`${message.author.username} Set their goals!`);
 		});
 	} else if (message.content.toLowerCase().startsWith(PREFIX+COMPLETE_KEY_WORD)) {
 		getUserById(message.author.id).then((data) => {
@@ -59,6 +60,8 @@ client.on('messageCreate', message => {
 			}
 			DB.collection(COLLECTION).doc(updatedUser.id).set(updatedUser).then(() => console.log(`${updatedUser.name} completed/updated`));
 		});
+	} else {
+		message.reply('ERR0R - Check your command and try again. Make sure there are no commas and you are using the correct day format. Example: "!set mon wed sat"');
 	}
 });
 
@@ -72,7 +75,7 @@ function startWeeklyReminder() {
 
 function startMorningReminder() {
 	// Runs at 10AM everyday
-	const JOB = new CronJob('15 24 12 * * *', () => {
+	const JOB = new CronJob('1 0 10 * * *', () => {
 		const today = new Date().getDay();
 
 		getUsersCollection().then((users) => {
@@ -143,7 +146,7 @@ function startMorningReminder() {
 
 function startBerateLosers() {
 	// Runs at 8PM everyday
-	const JOB = new CronJob('1 25 12 * * *', () => {
+	const JOB = new CronJob('1 0 20 * * *', () => {
 		const today = new Date().getDay();
 
 		getUsersCollection().then((users) => {
