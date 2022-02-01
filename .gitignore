@@ -21,3 +21,4 @@ config.json
 example.js
 firebaseConfig.js
 serviceAccountKey.json
+package-lock.json
