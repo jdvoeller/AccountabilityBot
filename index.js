@@ -133,8 +133,8 @@ function getStringOfUsersDueToday(userArr, day) {
 }
 
 function updateUserAndCompleteDay(user, message) {
-	const MESSAGE = message.split(' ')[1].toLowerCase();
-	switch (MESSAGE) {
+	const DAY = message.split(' ')[1].toLowerCase();
+	switch (DAY) {
 		case 'sun':
 			user.sunCompleted = true;
 			break;
