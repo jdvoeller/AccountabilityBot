@@ -21,10 +21,11 @@ Similar to the discord.js config file, we need a serviceAccountKey.json file fro
 ## Cron times
 Cron times have a strange (at first) syntax: '* * * * * *'
 ```
-'1 30 9 * * *' = 9:30:01 (meaning this will run at the 1st second of the 30th minute of the 9th hour every day)
+'1 30 9 * * *' = 9:30:01
 ```
  - The 1 represents the seconds (0, 59)
  - The 30 represents the minutes (0, 59)
  - The 9 represents the hour (0, 23)
  - The rest of the * represent ALL for day of the month, month, and day of the week
+
 Learn more here: https://www.netiq.com/documentation/cloud-manager-2-5/ncm-reference/data/bexyssf.html
