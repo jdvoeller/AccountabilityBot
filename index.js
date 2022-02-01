@@ -1,63 +1,68 @@
-const fs = require('fs');
 const { Client, Intents } = require('discord.js');
 const { token } = require('./config.json');
-const CronJob = require('cron').CronJob;
-
-// Firebase
+const CRON_JOB = require('cron').CronJob;
 const ADMIN = require('firebase-admin');
 const SERVICE_ACCOUNT = require('./serviceAccountKey.json');
+
+// Firebase
 ADMIN.initializeApp({
 	credential: ADMIN.credential.cert(SERVICE_ACCOUNT),
 });
-
 const DB = ADMIN.firestore();
 const COLLECTION = 'allUsers';
 
-// db.collection('new').doc('testDoc').set({ test: 'test'});
-
-// FIREBASE DATABASE
-// https://console.firebase.google.com/u/0/project/accountability-aff36/firestore/data/~2F
-
 // Reminders
-const WeeklyReminder = 'Hey Everyone, remember to use the command (!set) and use Mon Tue Wed Thu Fri Sat Sun to set your schedule today for the current week. Example: !set Mon Wed Fri to schedule your workouts for Monday, Wednesday, and Friday. When you have finish with a day use the complete command (!complete) with the day you completed. Example: "!complete Thu"';
+const WEEKLY_REMINDER_TEXT = 'Hey Everyone, remember to use the command (!set) and use Mon Tue Wed Thu Fri Sat Sun to set your schedule today for the current week. Example: !set Mon Wed Fri to schedule your workouts for Monday, Wednesday, and Friday. When you have finish with a day use the complete command (!complete) with the day you completed. Example: "!complete Thu"';
+const DAILY_REMINDER_TEXT = 'Reminder the following people have goals to be met today: ';
+const BERATING_REMINDER_TEXT = '@everyone ' + 'The following fakies have not completed their goals: ';
 
 // Commands
 const PREFIX = '!';
 const SET_KEY_WORD = 'set';
 const COMPLETE_KEY_WORD = 'complete';
 
-// Channels
+// Channel
 const ACCOUNTABILITY_CHANNEL = '936017308319641630';
 
-// Logic
-const client = new Client({ intents: [Intents.FLAGS.GUILDS, 'GUILD_MESSAGES'] });
+// Cron times
+const SUNDAY_WEEKLY_REMINDER_TIME = '1 30 9 * * 0'; // 9:30AM - every sunday
+const DAILY_REMINDER_TIME = '1 0 10 * * *'; // 10AM - every day
+const BERATING_REMINDER_TIME = '1 0 20 * * *'; // 8PM - every day
 
-client.once('ready', () => {
+// Initialize discord.js client
+const CLIENT = new Client({ intents: [Intents.FLAGS.GUILDS, 'GUILD_MESSAGES'] });
+
+CLIENT.once('ready', () => {
 	console.log('Fired up and ready to serve...');
 	
 	// Start reminder jobs
-	startWeeklyReminder();
-	startMorningReminder();
-	startBerateLosers();
+	startReminderJob(SUNDAY_WEEKLY_REMINDER_TIME, WEEKLY_REMINDER_TEXT, true); // Weekly sunday reminder to set goals
+	startReminderJob(DAILY_REMINDER_TIME, DAILY_REMINDER_TEXT); // Daily reminder to complete goal
+	startReminderJob(BERATING_REMINDER_TIME, BERATING_REMINDER_TEXT); // Daily berating of people at risk for their goal
 });
 
-client.on('messageCreate', message => {
-	// Ignore messages without prefix and if it's the bot
+CLIENT.on('messageCreate', message => {
 	if (!message.content.startsWith(PREFIX) || message.author.bot) return;
 
 	if (message.content.toLowerCase().startsWith(PREFIX+SET_KEY_WORD)) {
 		DB.collection(COLLECTION).doc(message.author.id).set(createUserObj(message.author, message.content)).then(() => {
 			console.log(`${message.author.username} updated/created successfully`);
+
+			// Celebrate setting of goal
 			message.reply(`${message.author.username} Set their goals!`);
 		});
 	} else if (message.content.toLowerCase().startsWith(PREFIX+COMPLETE_KEY_WORD)) {
 		getUserById(message.author.id).then((data) => {
 			let updatedUser = updateUserAndCompleteDay(data.data(), message.content);
+
 			if (updatedUser.completed) {
-				message.reply('@everyone ' + `${updatedUser.name}` + ' has completed their weekly goals! I bet you feel like a piece of shit compared to them xD');
+				// Celebrate completion of weekly goals
+				message.reply('@everyone ' + `${updatedUser.name}` + ' has completed their weekly goals!');
 			} else {
+				// Celebrate completion goal
 				message.reply(`Great job on completing your goal for today ${updatedUser.name}!!`);
 			}
+
 			DB.collection(COLLECTION).doc(updatedUser.id).set(updatedUser).then(() => console.log(`${updatedUser.name} completed/updated`));
 		});
 	} else {
@@ -65,194 +70,60 @@ client.on('messageCreate', message => {
 	}
 });
 
-function startWeeklyReminder() {
-	// '1 30 9 * * 0' - 9:30 every sunday
-	const JOB = new CronJob('1 30 9 * * 0', () => {
-		client.channels.cache.get(ACCOUNTABILITY_CHANNEL).send('@everyone ' + WeeklyReminder);
+function startReminderJob(cronTime, message, withoutUsers = false) {
+	const JOB = new CRON_JOB(cronTime, () => {
+		if (withoutUsers) {
+			sendReminder(message);
+			console.log('Reminder sent');
+		} else {
+			const TODAY = new Date().getDay();
+
+			getUsersCollection().then((users) => {
+				const ALL_USERS = users.docs.map(doc => doc.data());
+				const USERS_STRING = getStringOfUsersDueToday(ALL_USERS, TODAY);
+	
+				if (!!USERS_STRING) {
+					const UPDATED_MESSAGE = `${message} ${USERS_STRING}`;
+					sendReminder(UPDATED_MESSAGE);
+					console.log('Daily reminder sent');
+				}
+			});
+		}
 	});
 	JOB.start();
+	console.log(`${cronTime} Job set`);
 }
 
-function startMorningReminder() {
-	// Runs at 10AM everyday
-	const JOB = new CronJob('1 0 10 * * *', () => {
-		const today = new Date().getDay();
-
-		getUsersCollection().then((users) => {
-			const AllUsers = users.docs.map(doc => doc.data());
-			let userString;
-			switch(today) {
-				// Sunday
-				case 0:
-					usersString = getStringOfUsersDueToday(AllUsers, 'sun');
-					if (!!usersString) {
-						sendDailyReminder(usersString);
-					}
-					break;
-
-				// Monday
-				case 1:
-					usersString = getStringOfUsersDueToday(AllUsers, 'mon');
-					if (!!usersString) {
-						sendDailyReminder(usersString);
-					}
-					break;
-					
-				// Tuesday
-				case 2:
-					usersString = getStringOfUsersDueToday(AllUsers, 'tue');
-					if (!!usersString) {
-						sendDailyReminder(usersString);
-					}
-					break;
-	
-				// Wednesday
-				case 3:
-					usersString = getStringOfUsersDueToday(AllUsers, 'wed');
-					if (!!usersString) {
-						sendDailyReminder(usersString);
-					}
-					break;
-				
-				// Thursday
-				case 4:
-					usersString = getStringOfUsersDueToday(AllUsers, 'thu');
-					if (!!usersString) {
-						sendDailyReminder(usersString);
-					}
-					break;
-				
-				// Friday
-				case 5:
-					usersString = getStringOfUsersDueToday(AllUsers, 'fri');
-					if (!!usersString) {
-						sendDailyReminder(usersString);
-					}
-					break;
-	
-				// Saturday
-				case 6:
-					usersString = getStringOfUsersDueToday(AllUsers, 'sat');
-					if (!!usersString) {
-						sendDailyReminder(usersString);
-					}
-					break;
-			}
-		});
-		console.log('Daily reminder sent');
-	});
-	JOB.start();
-}
-
-function startBerateLosers() {
-	// Runs at 8PM everyday
-	const JOB = new CronJob('1 0 20 * * *', () => {
-		const today = new Date().getDay();
-
-		getUsersCollection().then((users) => {
-			const AllUsers = users.docs.map(doc => doc.data());
-			let userString;
-			switch(today) {
-				// Sunday
-				case 0:
-					usersString = getStringOfUsersDueToday(AllUsers, 'sun');
-					if (!!usersString) {
-						sendDailyBeratement(usersString);
-					}
-					break;
-
-				// Monday
-				case 1:
-					usersString = getStringOfUsersDueToday(AllUsers, 'mon');
-					if (!!usersString) {
-						sendDailyBeratement(usersString);
-					}
-					break;
-					
-				// Tuesday
-				case 2:
-					usersString = getStringOfUsersDueToday(AllUsers, 'tue');
-					if (!!usersString) {
-						sendDailyBeratement(usersString);
-					}
-					break;
-	
-				// Wednesday
-				case 3:
-					usersString = getStringOfUsersDueToday(AllUsers, 'wed');
-					if (!!usersString) {
-						sendDailyBeratement(usersString);
-					}
-					break;
-				
-				// Thursday
-				case 4:
-					usersString = getStringOfUsersDueToday(AllUsers, 'thu');
-					if (!!usersString) {
-						sendDailyBeratement(usersString);
-					}
-					break;
-				
-				// Friday
-				case 5:
-					usersString = getStringOfUsersDueToday(AllUsers, 'fri');
-					if (!!usersString) {
-						sendDailyBeratement(usersString);
-					}
-					break;
-	
-				// Saturday
-				case 6:
-					usersString = getStringOfUsersDueToday(AllUsers, 'sat');
-					if (!!usersString) {
-						sendDailyBeratement(usersString);
-					}
-					break;
-			}
-		});
-		console.log('Beratement reminder sent');
-	});
-	JOB.start();
-}
-
-function sendDailyReminder(users) {
-	client.channels.cache.get(ACCOUNTABILITY_CHANNEL).send(`Reminder the following people have goals to be met today: ${users}`);
-}
-
-function sendDailyBeratement(users) {
-	client.channels.cache.get(ACCOUNTABILITY_CHANNEL).send('@everyone ' + `The following fakies havent completed their goals: ${users}. Tag them and remind them.`);
+function sendReminder(message) {
+	CLIENT.channels.cache.get(ACCOUNTABILITY_CHANNEL).send(message);
 }
 
 function getStringOfUsersDueToday(userArr, day) {
 	let usersDue;
 	switch (day) {
-		case 'sun':
+		case 0:
 			usersDue = userArr.filter((user) => !user.sunCompleted);
 			break;
-		case 'mon':
+		case 1:
 			usersDue = userArr.filter((user) => !user.monCompleted);
 			break;
-		case 'tue':
+		case 2:
 			usersDue = userArr.filter((user) => !user.tueCompleted);
 			break;
-		case 'wed':
+		case 3:
 			usersDue = userArr.filter((user) => !user.wedCompleted);
 			break;
-		case 'thu':
+		case 4:
 			usersDue = userArr.filter((user) => !user.thuCompleted);
 			break;
-		case 'fri':
+		case 5:
 			usersDue = userArr.filter((user) => !user.friCompleted);
 			break;
-		case 'sat':
+		case 6:
 			usersDue = userArr.filter((user) => !user.satCompleted);
 			break;
 		default:
-			break;
-	}
-
-	if (!usersDue.length) {
-		return '';
+			return '';
 	}
 
 	let stringOfUsers = '';
@@ -262,8 +133,8 @@ function getStringOfUsersDueToday(userArr, day) {
 }
 
 function updateUserAndCompleteDay(user, message) {
-	let messageSplit = message.split(' ')[1].toLowerCase();
-	switch (messageSplit) {
+	const MESSAGE = message.split(' ')[1].toLowerCase();
+	switch (MESSAGE) {
 		case 'sun':
 			user.sunCompleted = true;
 			break;
@@ -291,27 +162,24 @@ function updateUserAndCompleteDay(user, message) {
 
 	if (user.sunCompleted && user.monCompleted && user.tueCompleted && user.wedCompleted && user.thuCompleted && user.friCompleted && user.satCompleted) {
 		user.completed = true;
-		user.atRisk = false;
 	}
 	return user;
 }
 
 function createUserObj(user, message) {
-	const daysSelected = getDays(message);
+	const DAYS_SELECTED = getDays(message);
 
 	return {
 		id: user.id,
 		name: user.username,
-		atRisk: false,
 		completed: false,
-		daysSelected: daysSelected,
-		sunCompleted: dayIncluded(daysSelected, 'sun') ? false : true,
-		monCompleted: dayIncluded(daysSelected, 'mon') ? false : true,
-		tueCompleted: dayIncluded(daysSelected, 'tue') ? false : true,
-		wedCompleted: dayIncluded(daysSelected, 'wed') ? false : true,
-		thuCompleted: dayIncluded(daysSelected, 'thu') ? false : true,
-		friCompleted: dayIncluded(daysSelected, 'fri') ? false : true,
-		satCompleted: dayIncluded(daysSelected, 'sat') ? false : true,
+		sunCompleted: dayIncluded(DAYS_SELECTED, 'sun') ? false : true,
+		monCompleted: dayIncluded(DAYS_SELECTED, 'mon') ? false : true,
+		tueCompleted: dayIncluded(DAYS_SELECTED, 'tue') ? false : true,
+		wedCompleted: dayIncluded(DAYS_SELECTED, 'wed') ? false : true,
+		thuCompleted: dayIncluded(DAYS_SELECTED, 'thu') ? false : true,
+		friCompleted: dayIncluded(DAYS_SELECTED, 'fri') ? false : true,
+		satCompleted: dayIncluded(DAYS_SELECTED, 'sat') ? false : true,
 		dateSet: new Date(),
 	}
 }
@@ -332,9 +200,8 @@ function getUsersCollection() {
 }
 
 function dayIncluded(daysSelected, day) {
-	const isIncluded = !!daysSelected.filter((selected) => selected === day).length;
-	return isIncluded;
-
+	const IS_INCLUDED = !!daysSelected.filter((selected) => selected === day).length;
+	return IS_INCLUDED;
 }
 
-client.login(token);
+CLIENT.login(token);
