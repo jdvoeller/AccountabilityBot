@@ -12,8 +12,8 @@ const DB = ADMIN.firestore();
 const COLLECTION = 'allUsers';
 
 // Reminders
-const WEEKLY_REMINDER_TEXT = 'Hey Everyone, remember to use the command (!set) and use Mon Tue Wed Thu Fri Sat Sun to set your schedule today for the current week. Example: !set Mon Wed Fri to schedule your workouts for Monday, Wednesday, and Friday. When you have finish with a day use the complete command (!complete) with the day you completed. Example: "!complete Thu"';
-const DAILY_REMINDER_TEXT = 'Reminder the following people have goals to be met today: ';
+const WEEKLY_REMINDER_TEXT = '@everyone ' + 'Hey everyone, remember to use the command (!set) and use Mon Tue Wed Thu Fri Sat Sun to set your schedule today for the current week. Example: !set Mon Wed Fri to schedule your workouts for Monday, Wednesday, and Friday. When you have finish with a day use the complete command (!complete) with the day you completed. Example: "!complete Thu"';
+const DAILY_REMINDER_TEXT = 'REMINDER!!! The following people have goals to be met today: ';
 const BERATING_REMINDER_TEXT = '@everyone ' + 'The following fakies have not completed their goals: ';
 
 // Commands
