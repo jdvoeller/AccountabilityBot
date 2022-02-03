@@ -20,6 +20,7 @@ const BERATING_REMINDER_TEXT = '@everyone ' + 'The following fakies have not com
 const PREFIX = '!';
 const SET_KEY_WORD = 'set';
 const COMPLETE_KEY_WORD = 'complete';
+const MY_DAYS = 'my days';
 
 // Channel
 const ACCOUNTABILITY_CHANNEL = '936017308319641630';
@@ -42,8 +43,9 @@ CLIENT.once('ready', () => {
 });
 
 CLIENT.on('messageCreate', message => {
-	if (!isValidCommand(message.content)) return;
+	if (message.author.bot || !isValidCommand(message.content)) return;
 
+	// SETTING
 	if (message.content.toLowerCase().startsWith(PREFIX+SET_KEY_WORD)) {
 		DB.collection(COLLECTION).doc(message.author.id).set(createUserObj(message.author, message.content)).then(() => {
 			console.log(`${message.author.username} updated/created successfully`);
@@ -51,6 +53,8 @@ CLIENT.on('messageCreate', message => {
 			// Celebrate setting of goal
 			message.reply(`${message.author.username} Set their goals!`);
 		});
+
+	// COMPLETED
 	} else if (message.content.toLowerCase().startsWith(PREFIX+COMPLETE_KEY_WORD)) {
 		getUserById(message.author.id).then((data) => {
 			let updatedUser = updateUserAndCompleteDay(data.data(), message.content);
@@ -65,6 +69,18 @@ CLIENT.on('messageCreate', message => {
 
 			DB.collection(COLLECTION).doc(updatedUser.id).set(updatedUser).then(() => console.log(`${updatedUser.name} completed/updated`));
 		});
+
+	// GET MY DAYS
+	} else if (message.content.toLowerCase().startsWith(PREFIX+MY_DAYS)) {
+		getUserById(message.author.id).then((data) => {
+			const userData = data.data();
+			let reply = '';
+			userData.daysSelected.forEach((day) => reply = reply + `${day}, `);
+			reply = reply.slice(0, -2);
+			message.reply(`${message.author.username}, your selected days are: ${reply}.`);
+		});
+
+	// ERROR
 	} else {
 		message.reply('ERR0R - Check your command and try again. Make sure there are no commas and you are using the correct day format. Example: "!set mon wed sat"');
 	}
@@ -72,7 +88,11 @@ CLIENT.on('messageCreate', message => {
 
 function isValidCommand(message) {
 	const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-	return (message.startsWith(PREFIX+SET_KEY_WORD) || message.startsWith(PREFIX+COMPLETE_KEY_WORD)) &&	DAYS.some((day) => message.endsWith(day)) && !message.author.bot;
+	return ((message.startsWith(PREFIX+SET_KEY_WORD) || message.startsWith(PREFIX+COMPLETE_KEY_WORD)) && DAYS.some((day) => message.endsWith(day)) || daylessCommand(message));
+}
+
+function daylessCommand(message) {
+	return message.toLowerCase().startsWith(PREFIX+MY_DAYS);
 }
 
 function startReminderJob(cronTime, message, withoutUsers = false) {
@@ -133,7 +153,7 @@ function getStringOfUsersDueToday(userArr, day) {
 
 	let stringOfUsers = '';
 	usersDue.forEach((user) => stringOfUsers = stringOfUsers + `${user.name}, `);
-	stringOfUsers = stringOfUsers.slice(0, -2)
+	stringOfUsers = stringOfUsers.slice(0, -2);
 	return stringOfUsers;
 }
 
@@ -178,6 +198,7 @@ function createUserObj(user, message) {
 		id: user.id,
 		name: user.username,
 		completed: false,
+		daysSelected: DAYS_SELECTED,
 		sunCompleted: dayIncluded(DAYS_SELECTED, 'sun') ? false : true,
 		monCompleted: dayIncluded(DAYS_SELECTED, 'mon') ? false : true,
 		tueCompleted: dayIncluded(DAYS_SELECTED, 'tue') ? false : true,
