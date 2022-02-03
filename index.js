@@ -42,7 +42,7 @@ CLIENT.once('ready', () => {
 });
 
 CLIENT.on('messageCreate', message => {
-	if (!message.content.startsWith(PREFIX) || message.author.bot) return;
+	if (!isValidCommand(message.content)) return;
 
 	if (message.content.toLowerCase().startsWith(PREFIX+SET_KEY_WORD)) {
 		DB.collection(COLLECTION).doc(message.author.id).set(createUserObj(message.author, message.content)).then(() => {
@@ -69,6 +69,11 @@ CLIENT.on('messageCreate', message => {
 		message.reply('ERR0R - Check your command and try again. Make sure there are no commas and you are using the correct day format. Example: "!set mon wed sat"');
 	}
 });
+
+function isValidCommand(message) {
+	const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+	return (message.startsWith(PREFIX+SET_KEY_WORD) || message.startsWith(PREFIX+COMPLETE_KEY_WORD)) &&	DAYS.some((day) => message.endsWith(day)) && !message.author.bot;
+}
 
 function startReminderJob(cronTime, message, withoutUsers = false) {
 	const JOB = new CRON_JOB(cronTime, () => {
