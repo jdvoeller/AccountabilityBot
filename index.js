@@ -20,6 +20,7 @@ const BERATING_REMINDER_TEXT = '@everyone ' + 'The following fakies have not com
 const PREFIX = '!';
 const SET_KEY_WORD = 'set';
 const COMPLETE_KEY_WORD = 'complete';
+const COM_KEY_WORD = 'com';
 const MY_DAYS = 'my days';
 
 // Channel
@@ -55,7 +56,7 @@ CLIENT.on('messageCreate', message => {
 		});
 
 	// COMPLETED
-	} else if (message.content.toLowerCase().startsWith(PREFIX+COMPLETE_KEY_WORD)) {
+	} else if (message.content.toLowerCase().startsWith(PREFIX+COMPLETE_KEY_WORD) || message.content.toLowerCase().startsWith(PREFIX+COM_KEY_WORD)) {
 		getUserById(message.author.id).then((data) => {
 			let updatedUser = updateUserAndCompleteDay(data.data(), message.content);
 
@@ -88,7 +89,7 @@ CLIENT.on('messageCreate', message => {
 
 function isValidCommand(message) {
 	const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-	return ((message.startsWith(PREFIX+SET_KEY_WORD) || message.startsWith(PREFIX+COMPLETE_KEY_WORD)) && DAYS.some((day) => message.endsWith(day)) || daylessCommand(message));
+	return ((message.startsWith(PREFIX+SET_KEY_WORD) || message.startsWith(PREFIX+COMPLETE_KEY_WORD) || message.startsWith(PREFIX+COM_KEY_WORD)) && DAYS.some((day) => message.endsWith(day)) || daylessCommand(message));
 }
 
 function daylessCommand(message) {
