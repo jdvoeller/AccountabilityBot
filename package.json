@@ -6,5 +6,12 @@
     "discord-api-types": "^0.26.1",
     "discord.js": "^13.6.0",
     "firebase-admin": "^10.0.2"
+  },
+  "scripts": {
+    "copy": "cp index.js dist/",
+    "rename": "node -e \"require('fs').rename('dist/index.js', 'dist/prod.js', function(err) { if (err) console.log(err); console.log('File successfully renamed!') })\"",
+    "update-prod-file": "npm run copy && npm run rename",
+    "start-bot": "node ./dist/prod.js",
+    "test-bot": "node index.js"
   }
 }
