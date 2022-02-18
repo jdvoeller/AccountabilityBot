@@ -10,7 +10,7 @@
   "scripts": {
     "copy": "cp index.js dist/",
     "rename": "node -e \"require('fs').rename('dist/index.js', 'dist/prod.js', function(err) { if (err) console.log(err); console.log('File successfully renamed!') })\"",
-    "update-prod-file": "npm run copy && npm run rename",
+    "update-prod": "npm run copy && npm run rename",
     "start-bot": "node ./dist/prod.js",
     "test-bot": "node index.js"
   }

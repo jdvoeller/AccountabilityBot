@@ -1,0 +1,5 @@
+{
+	"everyMorningTime": "1 0 17 * * *",
+	"sundaySetTime": "1 30 16 * * 0",
+	"beratingTime": "1 0 3 * * *"
+}

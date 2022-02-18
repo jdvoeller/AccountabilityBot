@@ -4,6 +4,7 @@ const CRON_JOB = require('cron').CronJob;
 const ADMIN = require('firebase-admin');
 const SERVICE_ACCOUNT = require('./serviceAccountKey.json');
 const { channel } = require('./discord-channel.json');
+const { everyMorningTime, sundaySetTime, beratingTime } = require('./cronTimes.json');
 
 // Firebase
 ADMIN.initializeApp({
@@ -27,11 +28,6 @@ const MY_DAYS = 'my days';
 // Channel
 const ACCOUNTABILITY_CHANNEL = channel;
 
-// Cron times
-const SUNDAY_WEEKLY_REMINDER_TIME = '1 30 9 * * 0'; // 9:30AM - every sunday
-const DAILY_REMINDER_TIME = '1 0 10 * * *'; // 10AM - every day
-const BERATING_REMINDER_TIME = '1 0 20 * * *'; // 8PM - every day
-
 // Initialize discord.js client
 const CLIENT = new Client({ intents: [Intents.FLAGS.GUILDS, 'GUILD_MESSAGES'] });
 
@@ -39,9 +35,9 @@ CLIENT.once('ready', () => {
 	console.log('Fired up and ready to serve...');
 	
 	// Start reminder jobs
-	startReminderJob(SUNDAY_WEEKLY_REMINDER_TIME, WEEKLY_REMINDER_TEXT, true); // Weekly sunday reminder to set goals
-	startReminderJob(DAILY_REMINDER_TIME, DAILY_REMINDER_TEXT); // Daily reminder to complete goal
-	startReminderJob(BERATING_REMINDER_TIME, BERATING_REMINDER_TEXT); // Daily berating of people at risk for their goal
+	startReminderJob(sundaySetTime, WEEKLY_REMINDER_TEXT, true); // Weekly sunday reminder to set goals
+	startReminderJob(everyMorningTime, DAILY_REMINDER_TEXT); // Daily reminder to complete goal
+	startReminderJob(beratingTime, BERATING_REMINDER_TEXT); // Daily berating of people at risk for their goal
 });
 
 CLIENT.on('messageCreate', message => {
