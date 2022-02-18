@@ -16,6 +16,7 @@ const COLLECTION = 'allUsers';
 const WEEKLY_REMINDER_TEXT = '@everyone ' + 'Hey everyone, remember to use the command (!set) and use Mon Tue Wed Thu Fri Sat Sun to set your schedule today for the current week. Example: !set Mon Wed Fri to schedule your workouts for Monday, Wednesday, and Friday. When you have finish with a day use the complete command (!complete) with the day you completed. Example: "!complete Thu"';
 const DAILY_REMINDER_TEXT = 'REMINDER!!! The following people have goals to be met today: ';
 const BERATING_REMINDER_TEXT = '@everyone ' + 'The following fakies have not completed their goals: ';
+const WRAP_UP_REMINDER_TEXT = '@everyone ' + 'Here is your weekly wrap-up:';
 
 // Commands
 const PREFIX = '!';
@@ -31,6 +32,7 @@ const ACCOUNTABILITY_CHANNEL = channel;
 const SUNDAY_WEEKLY_REMINDER_TIME = '1 30 9 * * 0'; // 9:30AM - every sunday
 const DAILY_REMINDER_TIME = '1 0 10 * * *'; // 10AM - every day
 const BERATING_REMINDER_TIME = '1 0 20 * * *'; // 8PM - every day
+const WRAP_UP_REMINDER_TIME = '1 43 14 * * 2'; // 7:30AM - every sunday
 
 // Initialize discord.js client
 const CLIENT = new Client({ intents: [Intents.FLAGS.GUILDS, 'GUILD_MESSAGES'] });
@@ -39,9 +41,11 @@ CLIENT.once('ready', () => {
 	console.log('Fired up and ready to serve...');
 	
 	// Start reminder jobs
-	startReminderJob(SUNDAY_WEEKLY_REMINDER_TIME, WEEKLY_REMINDER_TEXT, true); // Weekly sunday reminder to set goals
-	startReminderJob(DAILY_REMINDER_TIME, DAILY_REMINDER_TEXT); // Daily reminder to complete goal
-	startReminderJob(BERATING_REMINDER_TIME, BERATING_REMINDER_TEXT); // Daily berating of people at risk for their goal
+	startReminderJob(SUNDAY_WEEKLY_REMINDER_TIME, WEEKLY_REMINDER_TEXT, 'Sunday set reminder', true); // Weekly sunday reminder to set goals
+	startReminderJob(DAILY_REMINDER_TIME, DAILY_REMINDER_TEXT, 'Daily reminder'); // Daily reminder to complete goal
+	startReminderJob(BERATING_REMINDER_TIME, BERATING_REMINDER_TEXT, 'Berating reminder'); // Daily berating of people at risk for their goal
+	setWrapUpReminder();
+
 });
 
 CLIENT.on('messageCreate', message => {
@@ -97,7 +101,7 @@ function daylessCommand(message) {
 	return message.toLowerCase().startsWith(PREFIX+MY_DAYS);
 }
 
-function startReminderJob(cronTime, message, withoutUsers = false) {
+function startReminderJob(cronTime, message, jobName, withoutUsers = false) {
 	const JOB = new CRON_JOB(cronTime, () => {
 		if (withoutUsers) {
 			sendReminder(message);
@@ -118,7 +122,49 @@ function startReminderJob(cronTime, message, withoutUsers = false) {
 		}
 	});
 	JOB.start();
-	console.log(`${cronTime} Job set`);
+	console.log(`${jobName} Job set`);
+}
+
+function setWrapUpReminder() {
+	const JOB = new CRON_JOB(WRAP_UP_REMINDER_TIME, () => {
+		getUsersCollection().then((users) => {
+			let allWrapUpText = [];
+			const ALL_USERS = users.docs.map((doc => doc.data()));
+			ALL_USERS.forEach((user) => {
+				let daysCompleted = [];
+				let daysNotCompleted = [];
+				user.daysSelected.forEach((day) => {
+					switch (day) {
+						case 'sun':
+							user.sunCompleted ? daysCompleted.push(day) : daysNotCompleted.push(day);
+							break;
+						case 'mon':
+							user.monCompleted ? daysCompleted.push(day) : daysNotCompleted.push(day);
+							break;
+						case 'tue':
+							user.tueCompleted ? daysCompleted.push(day) : daysNotCompleted.push(day);
+							break;
+						case 'wed':
+							user.wedCompleted ? daysCompleted.push(day) : daysNotCompleted.push(day);
+							break;
+						case 'thu':
+							user.thuCompleted ? daysCompleted.push(day) : daysNotCompleted.push(day);
+							break;
+						case 'fri':
+							user.friCompleted ? daysCompleted.push(day) : daysNotCompleted.push(day);
+							break;
+						case 'sat':
+							user.satCompleted ? daysCompleted.push(day) : daysNotCompleted.push(day);
+							break;
+					}
+				});
+				allWrapUpText.push(`${user.name} completed ${daysCompleted}! They did not complete ${daysNotCompleted}!`);
+			});
+			allWrapUpText.forEach((text) => sendReminder(text));
+		});
+	});
+	JOB.start();
+	console.log('Wrap up job set');
 }
 
 function sendReminder(message) {
