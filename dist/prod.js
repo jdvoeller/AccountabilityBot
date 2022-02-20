@@ -43,50 +43,60 @@ CLIENT.once('ready', () => {
 CLIENT.on('messageCreate', message => {
 	if (message.author.bot || !isValidCommand(message.content)) return;
 
-	// SETTING
 	if (message.content.toLowerCase().startsWith(PREFIX+SET_KEY_WORD)) {
-		DB.collection(COLLECTION).doc(message.author.id).set(createUserObj(message.author, message.content)).then(() => {
-			console.log(`${message.author.username} updated/created successfully`);
-
-			// Celebrate setting of goal
-			message.reply(`${message.author.username} Set their goals!`);
-		});
-
-	// COMPLETED
+		setGoals(message);
 	} else if (message.content.toLowerCase().startsWith(PREFIX+COMPLETE_KEY_WORD) || message.content.toLowerCase().startsWith(PREFIX+COM_KEY_WORD)) {
-		getUserById(message.author.id).then((data) => {
-			let updatedUser = updateUserAndCompleteDay(data.data(), message.content);
-
-			if (updatedUser.completed) {
-				// Celebrate completion of weekly goals
-				message.reply('@everyone ' + `${updatedUser.name}` + ' has completed their weekly goals!');
-			} else {
-				// Celebrate completion goal
-				message.reply(`Great job on completing your goal for today ${updatedUser.name}!!`);
-			}
-
-			DB.collection(COLLECTION).doc(updatedUser.id).set(updatedUser).then(() => console.log(`${updatedUser.name} completed/updated`));
-		});
-
-	// GET MY DAYS
+		completeGoal(message);
 	} else if (message.content.toLowerCase().startsWith(PREFIX+MY_DAYS)) {
-		getUserById(message.author.id).then((data) => {
-			const userData = data.data();
-			let reply = '';
-			userData.daysSelected.forEach((day) => reply = reply + `${day}, `);
-			reply = reply.slice(0, -2);
-			message.reply(`${message.author.username}, your selected days are: ${reply}.`);
-		});
-
-	// ERROR
+		getDays(message);
 	} else {
 		message.reply('ERR0R - Check your command and try again. Make sure there are no commas and you are using the correct day format. Example: "!set mon wed sat"');
 	}
 });
 
+// Command functions START
+function setGoals(message) {
+	DB.collection(COLLECTION).doc(message.author.id).set(createUserObj(message.author, message.content)).then(() => {
+		console.log(`${message.author.username} updated/created successfully`);
+
+		// Celebrate setting of goal
+		message.reply(`${message.author.username} Set their goals!`);
+	});
+}
+
+function completeGoal(message) {
+	getUserById(message.author.id).then((data) => {
+		let updatedUser = updateUserAndCompleteDay(data.data(), message.content);
+
+		if (updatedUser.completed) {
+			// Celebrate completion of weekly goals
+			message.reply('@everyone ' + `${updatedUser.name}` + ' has completed their weekly goals!');
+		} else {
+			// Celebrate completion goal
+			message.reply(`Great job on completing your goal for today ${updatedUser.name}!!`);
+		}
+
+		DB.collection(COLLECTION).doc(updatedUser.id).set(updatedUser).then(() => console.log(`${updatedUser.name} completed/updated`));
+	});
+}
+
+function getDays(message) {
+	getUserById(message.author.id).then((data) => {
+		const userData = data.data();
+		let reply = '';
+		userData.daysSelected.forEach((day) => reply = reply + `${day}, `);
+		reply = reply.slice(0, -2);
+		message.reply(`${message.author.username}, your selected days are: ${reply}.`);
+	});
+}
+// Command functions END
+
 function isValidCommand(message) {
 	const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-	return ((message.startsWith(PREFIX+SET_KEY_WORD) || message.startsWith(PREFIX+COMPLETE_KEY_WORD) || message.startsWith(PREFIX+COM_KEY_WORD)) && DAYS.some((day) => message.endsWith(day)) || daylessCommand(message));
+	return ((message.toLowerCase().startsWith(PREFIX+SET_KEY_WORD) ||
+		message.toLowerCase().startsWith(PREFIX+COMPLETE_KEY_WORD) ||
+		message.toLowerCase().startsWith(PREFIX+COM_KEY_WORD)) && DAYS.some((day) => message.toLowerCase().endsWith(day)) ||
+		daylessCommand(message));
 }
 
 function daylessCommand(message) {
@@ -229,3 +239,10 @@ function dayIncluded(daysSelected, day) {
 }
 
 CLIENT.login(token);
+
+// TESTS
+function testCommandValidity() {
+	console.log('expect command to be valid: ', isValidCommand('!set MON tUe weD thu Fri SaT Sun'));
+}
+
+console.log(testCommandValidity());
