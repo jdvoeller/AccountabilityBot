@@ -1,5 +1,5 @@
 const { Client, Intents } = require('discord.js');
-const { token } = require('./config.json');
+const { token, utahTime } = require('./config.json');
 const CRON_JOB = require('cron').CronJob;
 const ADMIN = require('firebase-admin');
 const SERVICE_ACCOUNT = require('./serviceAccountKey.json');
@@ -109,11 +109,9 @@ function startReminderJob(cronTime, message, withoutUsers = false) {
 			sendReminder(message);
 			console.log('Reminder sent');
 		} else {
-			const TODAY = new Date().getDay();
-
 			getUsersCollection().then((users) => {
 				const ALL_USERS = users.docs.map(doc => doc.data());
-				const USERS_STRING = getStringOfUsersDueToday(ALL_USERS, TODAY);
+				const USERS_STRING = getStringOfUsersDueToday(ALL_USERS, getDay());
 	
 				if (!!USERS_STRING) {
 					const UPDATED_MESSAGE = `${message} ${USERS_STRING}`;
@@ -125,6 +123,14 @@ function startReminderJob(cronTime, message, withoutUsers = false) {
 	});
 	JOB.start();
 	console.log(`${cronTime} Job set`);
+}
+
+function getDay() {
+	let today = new Date();
+	if (!utahTime) {
+		today.setHours(today.getHours() - 7);
+	}
+	return today.getDay();
 }
 
 function sendReminder(message) {
@@ -239,10 +245,3 @@ function dayIncluded(daysSelected, day) {
 }
 
 CLIENT.login(token);
-
-// TESTS
-function testCommandValidity() {
-	console.log('expect command to be valid: ', isValidCommand('!set MON tUe weD thu Fri SaT Sun'));
-}
-
-console.log(testCommandValidity());
