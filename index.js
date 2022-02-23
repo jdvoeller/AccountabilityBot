@@ -49,6 +49,9 @@ CLIENT.on('messageCreate', message => {
 		completeGoal(message);
 	} else if (message.content.toLowerCase().startsWith(PREFIX+MY_DAYS)) {
 		getDays(message);
+	// Handle Tyler
+	} else if (message.content.toLowerCase().startsWith('fuck off')) {
+		message.reply('Aggressive...');
 	} else {
 		message.reply('ERR0R - Check your command and try again. Make sure there are no commas and you are using the correct day format. Example: "!set mon wed sat"');
 	}
@@ -106,7 +109,7 @@ function daylessCommand(message) {
 function startReminderJob(cronTime, message, withoutUsers = false) {
 	const JOB = new CRON_JOB(cronTime, () => {
 		if (withoutUsers) {
-			sendReminder(message);
+			sendMessage(message);
 			console.log('Reminder sent');
 		} else {
 			getUsersCollection().then((users) => {
@@ -115,7 +118,7 @@ function startReminderJob(cronTime, message, withoutUsers = false) {
 	
 				if (!!USERS_STRING) {
 					const UPDATED_MESSAGE = `${message} ${USERS_STRING}`;
-					sendReminder(UPDATED_MESSAGE);
+					sendMessage(UPDATED_MESSAGE);
 					console.log('Daily reminder sent');
 				}
 			});
@@ -133,7 +136,7 @@ function getDay() {
 	return today.getDay();
 }
 
-function sendReminder(message) {
+function sendMessage(message) {
 	CLIENT.channels.cache.get(ACCOUNTABILITY_CHANNEL).send(message);
 }
 
