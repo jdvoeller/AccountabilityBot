@@ -43,6 +43,10 @@ CLIENT.once('ready', () => {
 });
 
 CLIENT.on('messageCreate', message => {
+	if (shouldRespondToTyler(message.content, message.author.id)) {
+		message.reply('Aggressive...');
+	}
+
 	if (message.author.bot || !isValidCommand(message.content)) return;
 
 	if (message.content.toLowerCase().startsWith(PREFIX+SET_KEY_WORD)) {
@@ -52,8 +56,6 @@ CLIENT.on('messageCreate', message => {
 	} else if (message.content.toLowerCase().startsWith(PREFIX+MY_DAYS)) {
 		getMyDays(message);
 	// Handle Tyler
-	} else if (shouldRespondToTyler(message.content, message.user.id)) {
-		message.reply('Aggressive...');
 	} else {
 		message.reply('ERR0R - Check your command and try again. Make sure there are no commas and you are using the correct day format. Example: "!set mon wed sat"');
 	}
