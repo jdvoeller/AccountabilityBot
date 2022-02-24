@@ -1,10 +1,12 @@
 const { Client, Intents } = require('discord.js');
-const { token, utahTime } = require('./config.json');
+const { token } = require('./config.json');
 const CRON_JOB = require('cron').CronJob;
 const ADMIN = require('firebase-admin');
 const SERVICE_ACCOUNT = require('./serviceAccountKey.json');
 const { channel } = require('./discord-channel.json');
 const { everyMorningTime, sundaySetTime, beratingTime } = require('./cronTimes.json');
+
+const TYLER = '673311526240911420';
 
 // Firebase
 ADMIN.initializeApp({
@@ -48,9 +50,9 @@ CLIENT.on('messageCreate', message => {
 	} else if (message.content.toLowerCase().startsWith(PREFIX+COMPLETE_KEY_WORD) || message.content.toLowerCase().startsWith(PREFIX+COM_KEY_WORD)) {
 		completeGoal(message);
 	} else if (message.content.toLowerCase().startsWith(PREFIX+MY_DAYS)) {
-		getDays(message);
+		getMyDays(message);
 	// Handle Tyler
-	} else if (message.content.toLowerCase().startsWith('fuck off')) {
+	} else if (shouldRespondToTyler(message.content, message.user.id)) {
 		message.reply('Aggressive...');
 	} else {
 		message.reply('ERR0R - Check your command and try again. Make sure there are no commas and you are using the correct day format. Example: "!set mon wed sat"');
@@ -83,7 +85,7 @@ function completeGoal(message) {
 	});
 }
 
-function getDays(message) {
+function getMyDays(message) {
 	getUserById(message.author.id).then((data) => {
 		const userData = data.data();
 		let reply = '';
@@ -114,7 +116,7 @@ function startReminderJob(cronTime, message, withoutUsers = false) {
 		} else {
 			getUsersCollection().then((users) => {
 				const ALL_USERS = users.docs.map(doc => doc.data());
-				const USERS_STRING = getStringOfUsersDueToday(ALL_USERS, getDay());
+				const USERS_STRING = getStringOfUsersDueToday(ALL_USERS, new Date());
 	
 				if (!!USERS_STRING) {
 					const UPDATED_MESSAGE = `${message} ${USERS_STRING}`;
@@ -126,14 +128,6 @@ function startReminderJob(cronTime, message, withoutUsers = false) {
 	});
 	JOB.start();
 	console.log(`${cronTime} Job set`);
-}
-
-function getDay() {
-	let today = new Date();
-	if (!utahTime) {
-		today.setHours(today.getHours() - 7);
-	}
-	return today.getDay();
 }
 
 function sendMessage(message) {
@@ -245,6 +239,14 @@ function getUsersCollection() {
 function dayIncluded(daysSelected, day) {
 	const IS_INCLUDED = !!daysSelected.filter((selected) => selected === day).length;
 	return IS_INCLUDED;
+}
+
+function shouldRespondToTyler(message, id) {
+	return id === TYLER && (
+		message.toLowerCase().includes('fuck') ||
+		message.toLowerCase().includes('shut') ||
+		message.toLowerCase().includes('bot')
+	);
 }
 
 CLIENT.login(token);
